@@ -7,9 +7,24 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import <WebKit/WebKit.h>
+
+
+#define TEST_IMAGE @"Google Chrome.png"
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
+{
+	IBOutlet NSDictionaryController	*segmentsArrayController;
+	IBOutlet NSSlider 				*sliderRotationControl;
+	IBOutlet NSView				*colorChartView;
+	NSArray							*colorArray;
+	
+	SBJsonParser *jsonParser;
 
-@property (assign) IBOutlet NSWindow *window;
+}
+
+@property (assign) IBOutlet WebView 	*webView;
+@property (assign) IBOutlet NSWindow	*window;
+@property (assign) id 				jsonObject;
 
 @end

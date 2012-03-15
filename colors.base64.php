@@ -1,4 +1,45 @@
 <?php
+	function array2json($arr) { 
+		if(function_exists('json_encode')) return json_encode($arr); //Lastest versions of PHP already has this functionality.
+		$parts = array(); 
+		$is_list = false; 
+		
+		//Find out if the given array is a numerical array 
+		$keys = array_keys($arr); 
+		$max_length = count($arr)-1; 
+		if(($keys[0] == 0) and ($keys[$max_length] == $max_length)) {//See if the first key is 0 and last key is length - 1
+			$is_list = true; 
+			for($i=0; $i<count($keys); $i++) { //See if each key correspondes to its position
+				if($i != $keys[$i]) { //A key fails at position check. 
+					$is_list = false; //It is an associative array. 
+					break; 
+				} 
+			} 
+		} 
+		
+		foreach($arr as $key=>$value) { 
+			if(is_array($value)) { //Custom handling for arrays 
+				if($is_list) $parts[] = array2json($value); /* :RECURSION: */ 
+				else $parts[] = '"' . $key . '":' . array2json($value); /* :RECURSION: */
+			} else { 
+				$str = ''; 
+				if(!$is_list) $str = '"' . $key . '":'; 
+				
+				//Custom handling for multiple data types 
+				if(is_numeric($value)) $str .= $value; //Numbers 
+				elseif($value === false) $str .= 'false'; //The booleans 
+				elseif($value === true) $str .= 'true'; 
+				else $str .= '"' . addslashes($value) . '"'; //All other things
+				// :TODO: Is there any more datatype we should be in the lookout for? (Object?)
+				
+				$parts[] = $str; 
+			} 
+		} 
+		$json = implode(',',$parts); 
+		
+		if($is_list) return '[' . $json . ']';//Return numerical JSON 
+		return '{' . $json . '}';//Return associative JSON 
+	} 
 	
 	// Pretty print some JSON
 	function json_format($json) 	{
@@ -9,15 +50,15 @@
 		for($c = 0; $c < $len; $c++) {	$char = $json[$c];	switch($char)
 			{	case '{':
 				case '[': if(!$in_string) {	$new_json .= $char . "\n" . str_repeat($tab, $indent_level+1);	$indent_level++; }
-					else { 	$new_json .= $char;	} break;
+				else { 	$new_json .= $char;	} break;
 				case '}':
 				case ']': if(!$in_string) {	$indent_level--; $new_json .= "\n" . str_repeat($tab, $indent_level) . $char; }
-					else {	$new_json .= $char; } break;
+				else {	$new_json .= $char; } break;
 				case ',': if(!$in_string) { $new_json .= ",\n" . str_repeat($tab, $indent_level); }
-					else { $new_json .= $char; }
+				else { $new_json .= $char; }
 					break;
 				case ':': if(!$in_string) { $new_json .= ": ";	}
-					else { $new_json .= $char; 	}
+				else { $new_json .= $char; 	}
 					break;
 				case '"': if($c > 0 && $json[$c-1] != '\\') { $in_string = !$in_string; }
 				default: $new_json .= $char; break;                   
@@ -67,7 +108,7 @@
 	
 	
 	$X=$argv[1]; 
-	echo "arg 1 = $X";	
+	//	echo "arg 1 = $X";	
 	$imagedata = base64_decode($X);
 	$im = imagecreatefromstring($imagedata);
 	imagealphablending($im, true); // setting alpha blending on
@@ -77,20 +118,48 @@
 		for ($x=0; $x < $imgWidth; $x++) {
 			$index = imagecolorat($im,$x,$y);		$Colors = imagecolorsforindex($im,$index);
 			//ROUND THE COLORS, TO REDUCE THE NUMBER OF COLORS, SO THE WON'T BE ANY NEARLY DUPLICATE COLORS!
-			$Colors['red']=intval((($Colors['red'])+15)/32)*32;
-			$Colors['green']=intval((($Colors['green'])+15)/32)*32;
-			$Colors['blue']=intval((($Colors['blue'])+15)/32)*32;
-			if ($Colors['red']>=256) $Colors['red']=240; if ($Colors['green']>=256) $Colors['green']=240; if ($Colors['blue']>=256) $Colors['blue']=240;
-			$hexarray[]=substr("0".dechex($Colors['red']),-2).substr("0".dechex($Colors['green']),-2).substr("0".dechex($Colors['blue']),-2);
-	}	}	$hexarray=array_count_values($hexarray);   natsort($hexarray);  	$hexarray=array_reverse($hexarray,true);	
-	print_r(json_encode($hexarray));
+			if (!$Colors['alpha']>=100) {
+				$Colors['red']=intval((($Colors['red'])+15)/32)*32;
+				$Colors['green']=intval((($Colors['green'])+15)/32)*32;
+				$Colors['blue']=intval((($Colors['blue'])+15)/32)*32;
+				if ($Colors['red']>=256) $Colors['red']=240; 
+				if ($Colors['green']>=256) $Colors['green']=240; 
+				if ($Colors['blue']>=256) $Colors['blue']=240;
+				$hexarray[]=substr("0".dechex($Colors['red']),-2).substr("0".dechex($Colors['green']),-2).substr("0".dechex($Colors['blue']),-2);
+			}
+		}	
+	}	
+	$hexarray=array_count_values($hexarray);   natsort($hexarray);  	$hexarray=array_reverse($hexarray,true);	
 
-/* 	$username = get_current_user();
-	$File = "/Users/localadmin/desktop/test.png"; 
-	imagepng($im, $File); 
-*/
+	$keys = array_keys($hexarray);
+	$values = array_values($hexarray);
+	$outarray = array();
+	for ($y=0; $y < 6; $y++) {
+		$outarray['color'.$y] = array( "color" => $keys[$y], "count" => $values[$y]);
+	//		$outarray['colorcount'.$y] = $indexCountArray[$y];		
+	}
 
 
+//	print_r($hexarray);
+//	$indexArray = array_keys($hexarray);
+	
+	////		$key = $keys[$y];
+	//		$outarray['color'.$y] = $key;
+	////		$outarray['colorcount'.$y] = $hexarray[$key];
+	//	}
+	//
+//	$arrayArray = array( "colors" => $hexarray);
+//	print_r("[\"colors\",".json_encode($hexarray)."]");
+//	print_r(json_encode($hexarray));
+print_r(json_encode(array_slice($outarray, 0, 5)));
+	//	print_r(json_encode($hexarray));
+	
+	/* 	$username = get_current_user();
+	 $File = "/Users/localadmin/desktop/test.png"; 
+	 imagepng($im, $File); 
+	 */
+	
+	
 	// $commonColors=new GetMostCommonColors();
 	// $commonColors->image="$PHPIMAGE";
 	// $colors=$commonColors->Get_Color();
@@ -106,7 +175,7 @@
 	// 
 	// $r = array();
 	// $r["apps"]= $var5;
-
+	
 	// $username = get_current_user();
 	// $File = $argv[2]."/appsWithColors.json"; 
 	// $Handle = fopen($File, 'w');
@@ -114,15 +183,15 @@
 	// fwrite($Handle, json_format(json_encode($r))); 
 	// print "Data Written to $File"; 
 	// fclose($Handle); 
-
+	
 	// $var5 = json_decode ($X, true);	
 	// foreach($var5 as &$value ) {   //	echo $value->app;
-		
-		// $PHPIMAGE = $value['proxyIconPath'];
-
-		// $ex->image="$PHPIMAGE";
-		//		$app = array(); 	
-		//		$app[$value->app] = $value->result_array();
+	
+	// $PHPIMAGE = $value['proxyIconPath'];
+	
+	// $ex->image="$PHPIMAGE";
+	//		$app = array(); 	
+	//		$app[$value->app] = $value->result_array();
 	
 	
 	//	$swatches = array();
@@ -182,4 +251,4 @@
 	//	$org1 = new Org("tst".$i);	//	$org2 = new Org2("wtf".$i); 	//	array_push($arr[get_class($org1)], $org1);
 	//	array_push($arr[get_class($org2)], $org2);
 	//}
-?>	
+	?>	
